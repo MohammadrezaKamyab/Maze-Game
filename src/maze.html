@@ -1,0 +1,1014 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Maze Generator</title>
+  <style>
+    html, body {
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    body {
+      background: radial-gradient(ellipse at top left, #2af598 0%, #009efd 100%);
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    #maze {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    canvas {
+      display: block;
+      width: 100vw;
+      height: 100vh;
+      max-width: 100vw;
+      max-height: 100vh;
+      background: linear-gradient(135deg, #232526 0%, #414345 100%);
+      box-shadow: 0 0 60px #00e1ff88, 0 0 0 8px #232526;
+      border-radius: 18px;
+      transition: box-shadow 0.3s;
+      cursor: pointer;
+    }
+    #congrats {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      color: #fff;
+      font-size: 3vw;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      text-shadow: 0 0 20px #fff, 0 0 40px #ff3c7d;
+      z-index: 10;
+      display: none;
+      pointer-events: none;
+      user-select: none;
+      animation: pop 1s cubic-bezier(.17,.67,.83,.67) 1;
+    }
+    @keyframes pop {
+      0% { transform: translate(-50%, -50%) scale(0.7);}
+      70% { transform: translate(-50%, -50%) scale(1.1);}
+      100% { transform: translate(-50%, -50%) scale(1);}
+    }
+
+    /* Joystick styles */
+    #joystick-area {
+      position: fixed;
+      left: 30px;
+      bottom: 30px;
+      width: 120px;
+      height: 120px;
+      z-index: 100;
+      touch-action: none;
+      display: none;
+    }
+    #joystick-base {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 120px;
+      height: 120px;
+      border-radius: 60px;
+      background: #222a;
+      box-shadow: 0 0 12px #0004;
+    }
+    #joystick-knob {
+      position: absolute;
+      left: 40px;
+      top: 40px;
+      width: 40px;
+      height: 40px;
+      border-radius: 20px;
+      background: #ff9800;
+      box-shadow: 0 0 8px #ff9800;
+    }
+  </style>
+</head>
+<body>
+  <div id="maze">
+    <canvas id="mazeCanvas"></canvas>
+    <div id="congrats">🎉 Congratulations! 🎉</div>
+  </div>
+
+  <!-- Mobile controls: 4 direction buttons and shoot button -->
+  <div id="mobile-controls" style="display:none; position:fixed; bottom:30px; left:30px; z-index:200;">
+    <div style="display:flex; flex-direction:column; align-items:center;">
+      <button id="btn-up" style="width:90px;height:90px;margin-bottom:16px;border-radius:50%;background:#ff9800;color:#fff;font-size:3rem;border:none;box-shadow:0 0 12px #ff9800;">▲</button>
+      <div style="display:flex;flex-direction:row;">
+        <button id="btn-left" style="width:90px;height:90px;margin-right:16px;border-radius:50%;background:#ff9800;color:#fff;font-size:3rem;border:none;box-shadow:0 0 12px #ff9800;">◀</button>
+        <button id="btn-down" style="width:90px;height:90px;margin-right:16px;border-radius:50%;background:#ff9800;color:#fff;font-size:3rem;border:none;box-shadow:0 0 12px #ff9800;">▼</button>
+        <button id="btn-right" style="width:90px;height:90px;border-radius:50%;background:#ff9800;color:#fff;font-size:3rem;border:none;box-shadow:0 0 12px #ff9800;">▶</button>
+      </div>
+    </div>
+  </div>
+  <!-- Shoot button on lower right -->
+  <button id="btn-shoot" style="display:none; position:fixed; bottom:50px; right:50px; width:110px; height:110px; border-radius:55px; background:#2196f3; color:#fff; font-size:3rem; border:none; box-shadow:0 0 18px #2196f3; z-index:200;">🔥</button>
+
+  <script>
+    // --- State ---
+    let cols, rows, cellSize, grid, current, stack;
+    let player = { x: 0, y: 0 };
+    let cpu = { x: 0, y: 0 };
+    let cpuCrazy = false;
+    let endCell = null;
+    let fireworks = [];
+    let fireworkActive = false;
+    let carrots = [];
+    let carrotsCollected = 0;
+    let carrotAnimTime = 0;
+    let reachedEnderman = false;
+    let enderman = null;
+    let fires = [];
+    let invertMaze = false;
+    let invertTimeout = null;
+    let cpuChildren = [];
+    let cpuChildrenInterval = null;
+
+    // --- Canvas ---
+    const canvas = document.getElementById('mazeCanvas');
+    const ctx = canvas.getContext('2d');
+    const congratsDiv = document.getElementById('congrats');
+
+    // --- Images ---
+    const rabbitImg = new Image();
+    rabbitImg.src = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f407.png";
+    const holeImg = new Image();
+    holeImg.src = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f573.png";
+    const carrotImg = new Image();
+    carrotImg.src = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f955.png";
+    const fireImg = new Image();
+    fireImg.src = "https://cdn.jsdelivr.net/gh/twitter/twemoji@14.0.2/assets/72x72/1f525.png";
+
+    // --- Sounds ---
+    const eatCarrotSound = new Audio("../assets/harpsichord-mp3/A4.mp3");
+    const winSound = new Audio("../assets/coin.mp3");
+    const congratsSound = new Audio("../assets/firework.mp3");
+    const winMusic = new Audio("../assets/win.mp3");
+    const bgMusic = new Audio("../assets/Deeptheme.mp3");
+    const fireShootSound = new Audio("../assets/ex.mp3");
+    const fireShoot8Sound = new Audio("../assets/ex2.mp3");
+    fireShoot8Sound.volume = 0.7;
+
+    // --- Enable sound on first user interaction for browser autoplay policy ---
+    window.addEventListener('pointerdown', () => {
+      eatCarrotSound.play().catch(()=>{});
+      winSound.play().catch(()=>{});
+      congratsSound.play().catch(()=>{});
+      bgMusic.play().catch(()=>{});
+    }, { once: true });
+
+    // --- Timer ---
+    let timer = 300;
+    let timerInterval = null;
+    let timerActive = false;
+    const timerDiv = document.createElement('div');
+    timerDiv.style.position = 'fixed';
+    timerDiv.style.top = '30px';
+    timerDiv.style.right = '50px';
+    timerDiv.style.color = '#fff';
+    timerDiv.style.fontSize = '2.5vw';
+    timerDiv.style.fontFamily = "'Segoe UI', Arial, sans-serif";
+    timerDiv.style.textShadow = '0 0 10px #111, 0 0 20px #ff9800';
+    timerDiv.style.zIndex = '20';
+    timerDiv.style.userSelect = 'none';
+    timerDiv.style.background = 'rgba(20,20,20,0.92)';
+    timerDiv.style.borderRadius = '12px';
+    timerDiv.style.padding = '8px 24px';
+    timerDiv.style.fontWeight = 'bold';
+    timerDiv.style.letterSpacing = '2px';
+    timerDiv.style.boxShadow = '0 0 16px #111a';
+    timerDiv.innerText = '05:00';
+    document.body.appendChild(timerDiv);
+
+    function startTimer() {
+      timer = 300;
+      timerActive = true;
+      timerDiv.innerText = '05:00';
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        if (!timerActive) return;
+        timer--;
+        let min = Math.floor(timer / 60);
+        let sec = timer % 60;
+        timerDiv.innerText = `${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
+        if (timer <= 0) {
+          timerDiv.innerText = "⏰ Time's up!";
+          timerActive = false;
+          clearInterval(timerInterval);
+          setTimeout(() => {
+            alert("Time's up! Try again.");
+            startMaze();
+          }, 800);
+        }
+      }, 1000);
+    }
+    function stopTimer() {
+      timerActive = false;
+      if (timerInterval) clearInterval(timerInterval);
+    }
+
+    // --- Carrot counter ---
+    let carrotCounterDiv = document.createElement('div');
+    carrotCounterDiv.style.position = 'fixed';
+    carrotCounterDiv.style.top = '30px';
+    carrotCounterDiv.style.left = '50px';
+    carrotCounterDiv.style.color = '#fff';
+    carrotCounterDiv.style.fontSize = '2.5vw';
+    carrotCounterDiv.style.fontFamily = "'Segoe UI', Arial, sans-serif";
+    carrotCounterDiv.style.fontWeight = 'bold';
+    carrotCounterDiv.style.textShadow = '0 0 10px #111, 0 0 20px #ff9800';
+    carrotCounterDiv.style.zIndex = '20';
+    carrotCounterDiv.style.userSelect = 'none';
+    carrotCounterDiv.innerHTML = '🥕 0/0';
+    document.body.appendChild(carrotCounterDiv);
+
+    function updateCarrotCounter() {
+      carrotCounterDiv.innerHTML = `🥕 ${carrotsCollected}/${carrots.length}`;
+    }
+
+    // --- Maze setup ---
+    function getCanvasSize() {
+      // Use a fixed ratio and max size for beauty
+      const maxSize = 800; // px, adjust as you like
+      return Math.min(window.innerWidth, window.innerHeight, maxSize);
+    }
+
+    function setupMaze() {
+      const size = getCanvasSize();
+      canvas.width = size;
+      canvas.height = size;
+      canvas.style.width = size + "px";
+      canvas.style.height = size + "px";
+      cellSize = Math.floor(size / 14);
+      cols = Math.floor(size / cellSize);
+      rows = Math.floor(size / cellSize);
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.translate(
+        Math.floor((size - cols * cellSize) / 2),
+        Math.floor((size - rows * cellSize) / 2)
+      );
+      grid = [];
+      for (let y = 0; y < rows; y++) {
+        for (let x = 0; x < cols; x++) {
+          grid.push(new Cell(x, y));
+        }
+      }
+      current = grid[0];
+      stack = [];
+      player = { x: 0, y: 0 };
+      endCell = { x: cols - 1, y: rows - 1 };
+      cpu = { x: cols - 1, y: 0 };
+      fireworks = [];
+      fireworkActive = false;
+      congratsDiv.style.display = "none";
+    }
+    function index(x, y) {
+      if (x < 0 || y < 0 || x >= cols || y >= rows) return -1;
+      return x + y * cols;
+    }
+    function Cell(x, y) {
+      this.x = x;
+      this.y = y;
+      this.walls = [true, true, true, true];
+      this.visited = false;
+      this.draw = function() {
+        const px = this.x * cellSize;
+        const py = this.y * cellSize;
+        // Invert colors if needed
+        let visitedColor = invertMaze ? "#232526" : "#fff";
+        let unvisitedColor = invertMaze ? "#fff" : "#232526";
+        let wallColor = invertMaze ? "#fff" : "#111";
+        ctx.fillStyle = this.visited ? visitedColor : unvisitedColor;
+        ctx.fillRect(px, py, cellSize, cellSize);
+        ctx.save();
+        ctx.strokeStyle = wallColor;
+        ctx.lineWidth = 3;
+        if (this.walls[0]) { ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(px + cellSize, py); ctx.stroke(); }
+        if (this.walls[1]) { ctx.beginPath(); ctx.moveTo(px + cellSize, py); ctx.lineTo(px + cellSize, py + cellSize); ctx.stroke(); }
+        if (this.walls[2]) { ctx.beginPath(); ctx.moveTo(px + cellSize, py + cellSize); ctx.lineTo(px, py + cellSize); ctx.stroke(); }
+        if (this.walls[3]) { ctx.beginPath(); ctx.moveTo(px, py + cellSize); ctx.lineTo(px, py); ctx.stroke(); }
+        ctx.restore();
+      };
+    }
+    function removeWalls(a, b) {
+      let dx = a.x - b.x;
+      let dy = a.y - b.y;
+      if (dx === 1) { a.walls[3] = false; b.walls[1] = false; }
+      else if (dx === -1) { a.walls[1] = false; b.walls[3] = false; }
+      if (dy === 1) { a.walls[0] = false; b.walls[2] = false; }
+      else if (dy === -1) { a.walls[2] = false; b.walls[0] = false; }
+    }
+    function getUnvisitedNeighbors(cell) {
+      const neighbors = [];
+      const directions = [
+        [0, -1], [1, 0], [0, 1], [-1, 0]
+      ];
+      directions.forEach(([dx, dy]) => {
+        const neighbor = grid[index(cell.x + dx, cell.y + dy)];
+        if (neighbor && !neighbor.visited) neighbors.push(neighbor);
+      });
+      return neighbors;
+    }
+    function stepFast(callback) {
+      const start = performance.now();
+      let steps = 0;
+      function doStep() {
+        while (current && (performance.now() - start < 3000)) {
+          current.visited = true;
+          let neighbors = getUnvisitedNeighbors(current);
+          if (neighbors.length > 0) {
+            let next = neighbors[Math.floor(Math.random() * neighbors.length)];
+            stack.push(current);
+            removeWalls(current, next);
+            current = next;
+          } else if (stack.length > 0) {
+            current = stack.pop();
+          } else {
+            current = null;
+          }
+          steps++;
+        }
+        drawMaze();
+        if (current) {
+          requestAnimationFrame(doStep);
+        } else if (callback) {
+          callback();
+        }
+      }
+      doStep();
+    }
+
+    // --- Carrots ---
+    function placeCarrots() {
+      carrots = [];
+      carrotsCollected = 0;
+      const carrotCount = Math.floor(Math.random() * 6) + 5;
+      while (carrots.length < carrotCount) {
+        const x = Math.floor(Math.random() * cols);
+        const y = Math.floor(Math.random() * rows);
+        if ((x !== 0 || y !== 0) && (x !== endCell.x || y !== endCell.y) && !carrots.some(c => c.x === x && c.y === y)) {
+          carrots.push({ x, y, collected: false });
+        }
+      }
+    }
+
+    // --- Enderman ---
+    function placeEnderman() {
+      let valid = false;
+      while (!valid) {
+        const x = Math.floor(Math.random() * cols);
+        const y = Math.floor(Math.random() * rows);
+        valid =
+          (x !== 0 || y !== 0) &&
+          (x !== endCell.x || y !== endCell.y) &&
+          !carrots.some(c => c.x === x && c.y === y) &&
+          !(cpu && cpu.x === x && cpu.y === y) &&
+          !(player && player.x === x && player.y === y);
+        if (valid) {
+          enderman = { x, y };
+        }
+      }
+    }
+
+    // --- Main draw ---
+    function drawMaze() {
+      ctx.clearRect(-100, -100, canvas.width + 200, canvas.height + 200);
+      grid.forEach(cell => cell.draw());
+
+      // Animate carrots
+      carrotAnimTime += 0.035;
+      for (const carrot of carrots) {
+        if (!carrot.collected) {
+          const px = carrot.x * cellSize + cellSize / 2;
+          const py = carrot.y * cellSize + cellSize / 2;
+          const pulse = 1 + 0.15 * Math.sin(carrotAnimTime * 2 + carrot.x + carrot.y);
+          const float = Math.sin(carrotAnimTime * 2 + carrot.x * 2) * cellSize * 0.06;
+          ctx.save();
+          ctx.globalAlpha = 0.95;
+          ctx.shadowColor = invertMaze ? "#fff" : "#ff9800";
+          ctx.shadowBlur = 32 + 16 * Math.abs(Math.sin(carrotAnimTime + carrot.x));
+          if (carrotImg.complete) {
+            if (invertMaze) ctx.filter = "invert(1) hue-rotate(180deg)";
+            ctx.drawImage(
+              carrotImg,
+              px - cellSize * 0.18 * pulse,
+              py - cellSize * 0.18 * pulse + float,
+              cellSize * 0.36 * pulse,
+              cellSize * 0.36 * pulse
+            );
+            ctx.filter = "none";
+          } else {
+            ctx.beginPath();
+            ctx.arc(px, py + float, cellSize * 0.13 * pulse, 0, 2 * Math.PI);
+            ctx.fillStyle = invertMaze ? "#fff" : "#ff9800";
+            ctx.fill();
+          }
+          ctx.restore();
+        }
+      }
+
+      // End cell (hole)
+      if (endCell) {
+        const px = endCell.x * cellSize;
+        const py = endCell.y * cellSize;
+        ctx.save();
+        ctx.beginPath();
+        ctx.ellipse(px + cellSize / 2, py + cellSize / 2, cellSize * 0.32, cellSize * 0.18, 0, 0, 2 * Math.PI);
+        ctx.fillStyle = invertMaze ? "#fff" : "#111";
+        ctx.globalAlpha = 0.85;
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // CPU (blue rabbit)
+      if (cpu) {
+        const px = cpu.x * cellSize + cellSize / 2;
+        const py = cpu.y * cellSize + cellSize / 2;
+        ctx.save();
+        ctx.beginPath();
+        ctx.ellipse(px - cellSize * 0.10, py - cellSize * 0.18, cellSize * 0.07, cellSize * 0.18, 0, 0, 2 * Math.PI);
+        ctx.ellipse(px + cellSize * 0.10, py - cellSize * 0.18, cellSize * 0.07, cellSize * 0.18, 0, 0, 2 * Math.PI);
+        ctx.fillStyle = invertMaze ? "#fff" : "#2196f3";
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(px, py, cellSize * 0.22, 0, 2 * Math.PI);
+        ctx.fillStyle = invertMaze ? "#fff" : "#2196f3";
+        ctx.shadowColor = invertMaze ? "#fff" : "#2196f3";
+        ctx.shadowBlur = 0;
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(px - cellSize * 0.06, py - cellSize * 0.03, cellSize * 0.025, 0, 2 * Math.PI);
+        ctx.arc(px + cellSize * 0.06, py - cellSize * 0.03, cellSize * 0.025, 0, 2 * Math.PI);
+        ctx.fillStyle = invertMaze ? "#232526" : "#111";
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // Player (cat/rabbit) with bounce animation
+      if (player) {
+        const px = player.x * cellSize + cellSize / 2;
+        const py = player.y * cellSize + cellSize / 2;
+        // Animation: bounce up and down
+        const now = performance.now() / 1000;
+        const bounce = Math.sin(now * 6) * cellSize * 0.07;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.ellipse(px - cellSize * 0.10, py - cellSize * 0.18 + bounce, cellSize * 0.07, cellSize * 0.18, 0, 0, 2 * Math.PI);
+        ctx.ellipse(px + cellSize * 0.10, py - cellSize * 0.18 + bounce, cellSize * 0.07, cellSize * 0.18, 0, 0, 2 * Math.PI);
+        ctx.fillStyle = invertMaze ? "#fff" : "#ff9800";
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(px, py + bounce, cellSize * 0.22, 0, 2 * Math.PI);
+        ctx.fillStyle = invertMaze ? "#fff" : "#ff9800";
+        ctx.shadowColor = invertMaze ? "#fff" : "#ff9800";
+        ctx.shadowBlur = 0;
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(px - cellSize * 0.06, py - cellSize * 0.03 + bounce, cellSize * 0.025, 0, 2 * Math.PI);
+        ctx.arc(px + cellSize * 0.06, py - cellSize * 0.03 + bounce, cellSize * 0.025, 0, 2 * Math.PI);
+        ctx.fillStyle = invertMaze ? "#232526" : "#111";
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // Fires
+      for (const fire of fires) {
+        ctx.save();
+        ctx.globalAlpha = 0.92;
+        ctx.shadowColor = invertMaze ? "#fff" : "#ff9800";
+        ctx.shadowBlur = 40;
+        const fireRadius = cellSize * 0.28;
+        if (fireImg.complete) {
+          if (invertMaze) ctx.filter = "invert(1) hue-rotate(180deg)";
+          ctx.drawImage(
+            fireImg,
+            fire.x - fireRadius,
+            fire.y - fireRadius,
+            fireRadius * 2,
+            fireRadius * 2
+          );
+          ctx.filter = "none";
+        } else {
+          ctx.beginPath();
+          ctx.ellipse(fire.x, fire.y, fireRadius, fireRadius, 0, 0, 2 * Math.PI);
+          ctx.fillStyle = invertMaze ? "#fff" : "#ff9800";
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      // Fireworks
+      if (fireworkActive) {
+        drawFireworks();
+      }
+
+      // Enderman
+      if (enderman) {
+        const px = enderman.x * cellSize + cellSize / 2;
+        const py = enderman.y * cellSize + cellSize / 2;
+        ctx.save();
+        ctx.beginPath();
+        ctx.ellipse(px, py, cellSize * 0.13, cellSize * 0.22, 0, 0, 2 * Math.PI);
+        ctx.fillStyle = invertMaze ? "#fff" : "#111";
+        ctx.shadowColor = invertMaze ? "#fff" : "#222";
+        ctx.shadowBlur = 18;
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(px, py - cellSize * 0.18, cellSize * 0.11, 0, 2 * Math.PI);
+        ctx.fillStyle = invertMaze ? "#fff" : "#111";
+        ctx.shadowBlur = 8;
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(px - cellSize * 0.09, py - cellSize * 0.05);
+        ctx.lineTo(px - cellSize * 0.22, py + cellSize * 0.22);
+        ctx.moveTo(px + cellSize * 0.09, py - cellSize * 0.05);
+        ctx.lineTo(px + cellSize * 0.22, py + cellSize * 0.22);
+        ctx.strokeStyle = invertMaze ? "#fff" : "#111";
+        ctx.lineWidth = cellSize * 0.06;
+        ctx.lineCap = "round";
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(px - cellSize * 0.05, py + cellSize * 0.22);
+        ctx.lineTo(px - cellSize * 0.05, py + cellSize * 0.44);
+        ctx.moveTo(px + cellSize * 0.05, py + cellSize * 0.22);
+        ctx.lineTo(px + cellSize * 0.05, py + cellSize * 0.44);
+        ctx.strokeStyle = invertMaze ? "#fff" : "#111";
+        ctx.lineWidth = cellSize * 0.07;
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      // Draw CPU children (same size as parent)
+      for (const child of cpuChildren) {
+        const px = child.x * cellSize + cellSize / 2;
+        const py = child.y * cellSize + cellSize / 2;
+        ctx.save();
+        ctx.beginPath();
+        ctx.ellipse(px - cellSize * 0.10, py - cellSize * 0.18, cellSize * 0.07, cellSize * 0.18, 0, 0, 2 * Math.PI);
+        ctx.ellipse(px + cellSize * 0.10, py - cellSize * 0.18, cellSize * 0.07, cellSize * 0.18, 0, 0, 2 * Math.PI);
+        ctx.fillStyle = invertMaze ? "#fff" : "#2196f3";
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(px, py, cellSize * 0.22, 0, 2 * Math.PI);
+        ctx.fillStyle = invertMaze ? "#fff" : "#2196f3";
+        ctx.shadowColor = invertMaze ? "#fff" : "#2196f3";
+        ctx.shadowBlur = 0;
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(px - cellSize * 0.06, py - cellSize * 0.03, cellSize * 0.025, 0, 2 * Math.PI);
+        ctx.arc(px + cellSize * 0.06, py - cellSize * 0.03, cellSize * 0.025, 0, 2 * Math.PI);
+        ctx.fillStyle = invertMaze ? "#232526" : "#111";
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // Animate carrots
+      if (!fireworkActive) requestAnimationFrame(drawMaze);
+    }
+
+    // --- Fire logic ---
+    function shootFire() {
+      const px = player.x * cellSize + cellSize / 2;
+      const py = player.y * cellSize + cellSize / 2;
+      const speed = cellSize * 0.45;
+      if (reachedEnderman) {
+        fireShoot8Sound.currentTime = 0;
+        fireShoot8Sound.play().catch(()=>{});
+        for (let i = 0; i < 8; i++) {
+          const angle = (Math.PI * 2 * i) / 8;
+          fires.push({
+            x: px,
+            y: py,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            life: 32
+          });
+        }
+        // Invert all colors for 1 second
+        invertMaze = true;
+        if (invertTimeout) clearTimeout(invertTimeout);
+        invertTimeout = setTimeout(() => {
+          invertMaze = false;
+          drawMaze();
+        }, 1000);
+        drawMaze();
+      } else {
+        fireShootSound.currentTime = 0;
+        fireShootSound.play().catch(()=>{});
+        const angle = 0;
+        fires.push({
+          x: px,
+          y: py,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: 32
+        });
+      }
+    }
+
+    // --- Fire update ---
+    function updateFires() {
+      for (const fire of fires) {
+        const cx = Math.floor(fire.x / cellSize);
+        const cy = Math.floor(fire.y / cellSize);
+        const cell = grid[index(cx, cy)];
+        let hitWall = false;
+        if (cell) {
+          const nextX = fire.x + fire.vx;
+          const nextY = fire.y + fire.vy;
+          const nx = Math.floor(nextX / cellSize);
+          const ny = Math.floor(nextY / cellSize);
+          if (nx < cx && cell.walls[3]) hitWall = true;
+          if (nx > cx && cell.walls[1]) hitWall = true;
+          if (ny < cy && cell.walls[0]) hitWall = true;
+          if (ny > cy && cell.walls[2]) hitWall = true;
+        }
+        if (hitWall) {
+          fire.life = 0;
+          continue;
+        }
+        fire.x += fire.vx;
+        fire.y += fire.vy;
+        fire.life--;
+      }
+      fires = fires.filter(f => f.life > 0);
+
+      // Kill CPU if hit by fire
+      if (cpu) {
+        const cpuPx = cpu.x * cellSize + cellSize / 2;
+        const cpuPy = cpu.y * cellSize + cellSize / 2;
+        for (const fire of fires) {
+          const dx = fire.x - cpuPx;
+          const dy = fire.y - cpuPy;
+          if (Math.sqrt(dx * dx + dy * dy) < cellSize * 0.32) {
+            cpu = null;
+            break;
+          }
+        }
+      }
+
+      // Kill carrots if hit by fire
+      for (const fire of fires) {
+        for (const carrot of carrots) {
+          if (!carrot.collected) {
+            const carrotPx = carrot.x * cellSize + cellSize / 2;
+            const carrotPy = carrot.y * cellSize + cellSize / 2;
+            const dx = fire.x - carrotPx;
+            const dy = fire.y - carrotPy;
+            if (Math.sqrt(dx * dx + dy * dy) < cellSize * 0.28) {
+              carrot.collected = true;
+              carrotsCollected++;
+              updateCarrotCounter();
+            }
+          }
+        }
+      }
+
+      // Add this after "Kill CPU if hit by fire"
+      for (const fire of fires) {
+        for (let i = cpuChildren.length - 1; i >= 0; i--) {
+          const child = cpuChildren[i];
+          const childPx = child.x * cellSize + cellSize / 2;
+          const childPy = child.y * cellSize + cellSize / 2;
+          const dx = fire.x - childPx;
+          const dy = fire.y - childPy;
+          if (Math.sqrt(dx * dx + dy * dy) < cellSize * 0.32) { // match parent size
+            cpuChildren.splice(i, 1); // Remove child
+          }
+        }
+      }
+    }
+    (function fireLoop() {
+      updateFires();
+      setTimeout(fireLoop, 30);
+    })();
+
+    // --- Fireworks effect ---
+    function randomColor() {
+      const colors = [
+        "#ff3c7d", "#43ff64", "#ffd700", "#00e1ff", "#ff7f50", "#fffbe6", "#ffe066"
+      ];
+      return colors[Math.floor(Math.random() * colors.length)];
+    }
+    function Firework(x, y) {
+      this.x = x;
+      this.y = y;
+      this.particles = [];
+      for (let i = 0; i < 30; i++) {
+        const angle = (Math.PI * 2 * i) / 30;
+        const speed = Math.random() * 4 + 2;
+        this.particles.push({
+          x: x,
+          y: y,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          alpha: 1,
+          color: randomColor()
+        });
+      }
+    }
+    function drawFireworks() {
+      for (let fw of fireworks) {
+        for (let p of fw.particles) {
+          ctx.save();
+          ctx.globalAlpha = p.alpha;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, 4, 0, 2 * Math.PI);
+          ctx.fillStyle = p.color;
+          ctx.shadowColor = p.color;
+          ctx.shadowBlur = 20;
+          ctx.fill();
+          ctx.restore();
+        }
+      }
+      updateFireworks();
+    }
+    function updateFireworks() {
+      for (let fw of fireworks) {
+        for (let p of fw.particles) {
+          p.x += p.vx;
+          p.y += p.vy;
+          p.vx *= 0.96;
+          p.vy *= 0.96;
+          p.vy += 0.04;
+          p.alpha *= 0.97;
+        }
+      }
+      fireworks = fireworks.filter(fw =>
+        fw.particles.some(p => p.alpha > 0.05)
+      );
+      if (fireworks.length > 0) {
+        requestAnimationFrame(drawMaze);
+      } else if (fireworkActive) {
+        setTimeout(() => {
+          congratsDiv.style.display = "none";
+          fireworkActive = false;
+          startMaze();
+        }, 2000);
+      }
+    }
+
+    // --- CPU movement logic ---
+    function moveCPU() {
+      if (fireworkActive || !cpu) return;
+      const path = findPath(cpu, player);
+      if (path.length > 0) {
+        // Move one step along the path
+        cpu.x = path[0][0];
+        cpu.y = path[0][1];
+      }
+      // Check for collision with player
+      if (cpu.x === player.x && cpu.y === player.y) {
+        setTimeout(() => {
+          alert("CPU caught you! Try again.");
+          startMaze();
+        }, 100);
+        return;
+      }
+      setTimeout(moveCPU, 350); // Adjust speed as needed
+    }
+
+    // --- CPU children logic ---
+    function spawnCPUChild() {
+      // Place child at the right top corner
+      cpuChildren.push({ x: cols - 1, y: 0 });
+      drawMaze();
+    }
+
+    // --- CPU children movement logic ---
+    function moveCPUChildren() {
+      for (let child of cpuChildren) {
+        const path = findPath(child, player);
+        if (path.length > 0) {
+          child.x = path[0][0];
+          child.y = path[0][1];
+        }
+        // Check for collision with player
+        if (child.x === player.x && child.y === player.y) {
+          setTimeout(() => {
+            alert("A CPU child caught you! Try again.");
+            startMaze();
+          }, 100);
+          return;
+        }
+      }
+      setTimeout(moveCPUChildren, 350);
+    }
+
+    // --- Enderman random movement ---
+    function moveEnderman() {
+      if (!enderman || fireworkActive) return;
+      const from = grid[index(enderman.x, enderman.y)];
+      if (!from) return;
+      const moves = [];
+      if (!from.walls[0] && enderman.y > 0) moves.push([enderman.x, enderman.y - 1]);
+      if (!from.walls[1] && enderman.x < cols - 1) moves.push([enderman.x + 1, enderman.y]);
+      if (!from.walls[2] && enderman.y < rows - 1) moves.push([enderman.x, enderman.y + 1]);
+      if (!from.walls[3] && enderman.x > 0) moves.push([enderman.x - 1, enderman.y]);
+      if (moves.length > 0) {
+        const [nx, ny] = moves[Math.floor(Math.random() * moves.length)];
+        enderman.x = nx;
+        enderman.y = ny;
+      }
+      setTimeout(moveEnderman, 500); // Move every 0.5 seconds
+    }
+
+    // --- Player movement ---
+    window.addEventListener('keydown', e => {
+      if (fireworkActive) return;
+      if (e.code === "Space") {
+        shootFire();
+        e.preventDefault();
+        return;
+      }
+      let moved = false;
+      const from = grid[index(player.x, player.y)];
+      if (!from) return;
+      let nx = player.x, ny = player.y;
+      if ((e.key === 'ArrowUp' || e.key === 'w') && !from.walls[0]) {
+        ny--;
+        moved = true;
+      } else if ((e.key === 'ArrowRight' || e.key === 'd') && !from.walls[1]) {
+        nx++;
+        moved = true;
+      } else if ((e.key === 'ArrowDown' || e.key === 's') && !from.walls[2]) {
+        ny++;
+        moved = true;
+      } else if ((e.key === 'ArrowLeft' || e.key === 'a') && !from.walls[3]) {
+        nx--;
+        moved = true;
+      }
+      if (moved) {
+        player.x = nx;
+        player.y = ny;
+        let ateCarrot = false;
+        for (const carrot of carrots) {
+          if (!carrot.collected && carrot.x === player.x && carrot.y === player.y) {
+            carrot.collected = true;
+            carrotsCollected++;
+            ateCarrot = true;
+            updateCarrotCounter();
+          }
+        }
+        if (ateCarrot) {
+          eatCarrotSound.currentTime = 0;
+          eatCarrotSound.play().catch(()=>{});
+        }
+        if (enderman && player.x === enderman.x && player.y === enderman.y) {
+          reachedEnderman = true;
+          enderman = null;
+        }
+        drawMaze();
+        if (player.x === endCell.x && player.y === endCell.y) {
+          winSound.currentTime = 0;
+          winSound.play().catch(()=>{});
+          congratsDiv.style.display = "block";
+          congratsSound.currentTime = 0;
+          congratsSound.play().catch(()=>{});
+          showFireworks();
+
+          // --- Level completion logic ---
+          const params = new URLSearchParams(window.location.search);
+          const level = Number(params.get('level'));
+          if (level) {
+            let completed = [];
+            try {
+              completed = JSON.parse(localStorage.getItem('maze_completed_levels') || '[]');
+            } catch {}
+            if (!completed.includes(level)) {
+              completed.push(level);
+              localStorage.setItem('maze_completed_levels', JSON.stringify(completed));
+            }
+          }
+
+          // Redirect to gallery after a short delay so player sees the congrats
+          setTimeout(() => {
+            window.location.href = "../mazelevel.html";
+          }, 2500); // 2.5 seconds, adjust as you like
+        }
+        e.preventDefault();
+      }
+    });
+
+    // Show joystick only on touch devices
+    if ('ontouchstart' in window) {
+      document.getElementById('mobile-controls').style.display = 'block';
+      document.getElementById('btn-shoot').style.display = 'block';
+    }
+
+    // Button event listeners
+    document.getElementById('btn-up').addEventListener('touchstart', function(e) {
+      simulateKey('ArrowUp'); e.preventDefault();
+    }, {passive:false});
+    document.getElementById('btn-down').addEventListener('touchstart', function(e) {
+      simulateKey('ArrowDown'); e.preventDefault();
+    }, {passive:false});
+    document.getElementById('btn-left').addEventListener('touchstart', function(e) {
+      simulateKey('ArrowLeft'); e.preventDefault();
+    }, {passive:false});
+    document.getElementById('btn-right').addEventListener('touchstart', function(e) {
+      simulateKey('ArrowRight'); e.preventDefault();
+    }, {passive:false});
+    document.getElementById('btn-shoot').addEventListener('touchstart', function(e) {
+      simulateKey(' '); e.preventDefault();
+    }, {passive:false});
+
+    // Simulate keyboard event for movement
+    function simulateKey(key) {
+      window.dispatchEvent(new KeyboardEvent('keydown', {key: key}));
+    }
+
+    window.addEventListener('resize', () => {
+      startMaze();
+    });
+
+    // --- Start game ---
+    function startMaze() {
+      setupMaze();
+      placeCarrots();
+      updateCarrotCounter();
+      placeEnderman();
+      drawMaze();
+      cpu = { x: cols - 1, y: 0 };
+      cpuCrazy = false;
+      cpuChildren = [];
+      stepFast();
+      startTimer();
+      setTimeout(moveCPU, 700);
+      setTimeout(moveCPUChildren, 700);
+      if (cpuChildrenInterval) clearInterval(cpuChildrenInterval);
+      cpuChildrenInterval = setInterval(spawnCPUChild, 5000); // every 5 seconds
+      reachedEnderman = false;
+      setTimeout(moveEnderman, 700); // <--- Add this line
+    }
+    startMaze();
+
+    function showFireworks() {
+      fireworkActive = true;
+      fireworks.push(new Firework(
+        canvas.width / 2,
+        canvas.height / 2
+      ));
+      drawFireworks();
+    }
+
+    function findPath(from, to) {
+      const queue = [];
+      const visited = new Set();
+      const prev = {};
+      queue.push([from.x, from.y]);
+      visited.add(`${from.x},${from.y}`);
+
+      while (queue.length > 0) {
+        const [x, y] = queue.shift();
+        if (x === to.x && y === to.y) break;
+        const cell = grid[index(x, y)];
+        if (!cell) continue;
+        // Up
+        if (!cell.walls[0] && y > 0 && !visited.has(`${x},${y-1}`)) {
+          queue.push([x, y-1]);
+          visited.add(`${x},${y-1}`);
+          prev[`${x},${y-1}`] = [x, y];
+        }
+        // Right
+        if (!cell.walls[1] && x < cols-1 && !visited.has(`${x+1},${y}`)) {
+          queue.push([x+1, y]);
+          visited.add(`${x+1},${y}`);
+          prev[`${x+1},${y}`] = [x, y];
+        }
+        // Down
+        if (!cell.walls[2] && y < rows-1 && !visited.has(`${x},${y+1}`)) {
+          queue.push([x, y+1]);
+          visited.add(`${x},${y+1}`);
+          prev[`${x},${y+1}`] = [x, y];
+        }
+        // Left
+        if (!cell.walls[3] && x > 0 && !visited.has(`${x-1},${y}`)) {
+          queue.push([x-1, y]);
+          visited.add(`${x-1},${y}`);
+          prev[`${x-1},${y}`] = [x, y];
+        }
+      }
+
+      // Reconstruct path
+      let path = [];
+      let curr = [to.x, to.y];
+      while (prev[`${curr[0]},${curr[1]}`]) {
+        path.push(curr);
+        curr = prev[`${curr[0]},${curr[1]}`];
+      }
+      path.reverse();
+      return path;
+    }
+  </script>
+</body>
+</html>
