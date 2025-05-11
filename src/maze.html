@@ -61,47 +61,34 @@
 
     /* Joystick styles */
     #joystick-area {
-      display: none;
       position: fixed;
-      bottom: 40px;
-      right: 40px;
-      width: 140px;
-      height: 140px;
-      z-index: 200;
+      left: 30px;
+      bottom: 30px;
+      width: 120px;
+      height: 120px;
+      z-index: 100;
       touch-action: none;
+      display: none;
     }
     #joystick-base {
       position: absolute;
       left: 0;
       top: 0;
-      width: 140px;
-      height: 140px;
-      border-radius: 70px;
+      width: 120px;
+      height: 120px;
+      border-radius: 60px;
       background: #222a;
       box-shadow: 0 0 12px #0004;
     }
     #joystick-knob {
       position: absolute;
-      left: 50px;
-      top: 50px;
+      left: 40px;
+      top: 40px;
       width: 40px;
       height: 40px;
       border-radius: 20px;
       background: #ff9800;
       box-shadow: 0 0 8px #ff9800;
-    }
-    #joystick-shoot {
-      position: absolute;
-      right: -80px;
-      bottom: 0;
-      width: 80px;
-      height: 80px;
-      border-radius: 40px;
-      background: #2196f3;
-      color: #fff;
-      font-size: 2.5rem;
-      border: none;
-      box-shadow: 0 0 16px #2196f3;
     }
 
     /* Mobile controls styles */
@@ -162,13 +149,6 @@
       </div>
       <button id="btn-shoot" class="mobile-shoot-btn" style="margin-top:18px;width:140px;height:140px;font-size:3.8rem;">🔥</button>
     </div>
-  </div>
-
-  <!-- Joystick for mobile, bottom right -->
-  <div id="joystick-area" style="display:none; position:fixed; bottom:40px; right:40px; width:140px; height:140px; z-index:200; touch-action:none;">
-    <div id="joystick-base" style="position:absolute; left:0; top:0; width:140px; height:140px; border-radius:70px; background:#222a; box-shadow:0 0 12px #0004;"></div>
-    <div id="joystick-knob" style="position:absolute; left:50px; top:50px; width:40px; height:40px; border-radius:20px; background:#ff9800; box-shadow:0 0 8px #ff9800;"></div>
-    <button id="joystick-shoot" style="position:absolute; right:-80px; bottom:0; width:80px; height:80px; border-radius:40px; background:#2196f3; color:#fff; font-size:2.5rem; border:none; box-shadow:0 0 16px #2196f3;">🔥</button>
   </div>
 
   <script>
