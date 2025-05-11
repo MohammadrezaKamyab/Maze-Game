@@ -61,34 +61,47 @@
 
     /* Joystick styles */
     #joystick-area {
-      position: fixed;
-      left: 30px;
-      bottom: 30px;
-      width: 120px;
-      height: 120px;
-      z-index: 100;
-      touch-action: none;
       display: none;
+      position: fixed;
+      bottom: 40px;
+      right: 40px;
+      width: 140px;
+      height: 140px;
+      z-index: 200;
+      touch-action: none;
     }
     #joystick-base {
       position: absolute;
       left: 0;
       top: 0;
-      width: 120px;
-      height: 120px;
-      border-radius: 60px;
+      width: 140px;
+      height: 140px;
+      border-radius: 70px;
       background: #222a;
       box-shadow: 0 0 12px #0004;
     }
     #joystick-knob {
       position: absolute;
-      left: 40px;
-      top: 40px;
+      left: 50px;
+      top: 50px;
       width: 40px;
       height: 40px;
       border-radius: 20px;
       background: #ff9800;
       box-shadow: 0 0 8px #ff9800;
+    }
+    #joystick-shoot {
+      position: absolute;
+      right: -80px;
+      bottom: 0;
+      width: 80px;
+      height: 80px;
+      border-radius: 40px;
+      background: #2196f3;
+      color: #fff;
+      font-size: 2.5rem;
+      border: none;
+      box-shadow: 0 0 16px #2196f3;
     }
 
     /* Mobile controls styles */
@@ -149,6 +162,13 @@
       </div>
       <button id="btn-shoot" class="mobile-shoot-btn" style="margin-top:18px;width:140px;height:140px;font-size:3.8rem;">🔥</button>
     </div>
+  </div>
+
+  <!-- Joystick for mobile, bottom right -->
+  <div id="joystick-area" style="display:none; position:fixed; bottom:40px; right:40px; width:140px; height:140px; z-index:200; touch-action:none;">
+    <div id="joystick-base" style="position:absolute; left:0; top:0; width:140px; height:140px; border-radius:70px; background:#222a; box-shadow:0 0 12px #0004;"></div>
+    <div id="joystick-knob" style="position:absolute; left:50px; top:50px; width:40px; height:40px; border-radius:20px; background:#ff9800; box-shadow:0 0 8px #ff9800;"></div>
+    <button id="joystick-shoot" style="position:absolute; right:-80px; bottom:0; width:80px; height:80px; border-radius:40px; background:#2196f3; color:#fff; font-size:2.5rem; border:none; box-shadow:0 0 16px #2196f3;">🔥</button>
   </div>
 
   <script>
@@ -1000,6 +1020,145 @@
     document.getElementById('btn-shoot').addEventListener('touchstart', function(e) {
       simulateKey(' '); e.preventDefault();
     }, {passive:false});
+
+    // Show joystick only on touch devices
+    if ('ontouchstart' in window) {
+      document.getElementById('joystick-area').style.display = 'block';
+    }
+
+    // Joystick logic
+    const joystickArea = document.getElementById('joystick-area');
+    const joystickKnob = document.getElementById('joystick-knob');
+    let dragging = false, startX = 0, startY = 0, dx = 0, dy = 0;
+
+    joystickKnob.addEventListener('touchstart', function(e) {
+      dragging = true;
+      const touch = e.touches[0];
+      startX = touch.clientX;
+      startY = touch.clientY;
+      dx = 0; dy = 0;
+      e.preventDefault();
+    }, {passive:false});
+
+    window.addEventListener('touchmove', function(e) {
+      if (!dragging) return;
+      const touch = e.touches[0];
+      dx = touch.clientX - startX;
+      dy = touch.clientY - startY;
+      // Limit knob movement
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      const maxDist = 50;
+      if (dist > maxDist) {
+        dx = dx * maxDist / dist;
+        dy = dy * maxDist / dist;
+      }
+      joystickKnob.style.left = (50 + dx) + 'px';
+      joystickKnob.style.top = (50 + dy) + 'px';
+    }, {passive:false});
+
+    window.addEventListener('touchend', function(e) {
+      if (!dragging) return;
+      dragging = false;
+      // Determine direction
+      let moved = false;
+      if (Math.abs(dx) > Math.abs(dy)) {
+        if (dx > 20) {
+          movePlayerBy('right', 2);
+          moved = true;
+        } else if (dx < -20) {
+          movePlayerBy('left', 2);
+          moved = true;
+        }
+      } else {
+        if (dy > 20) {
+          movePlayerBy('down', 2);
+          moved = true;
+        } else if (dy < -20) {
+          movePlayerBy('up', 2);
+          moved = true;
+        }
+      }
+      // Reset knob
+      joystickKnob.style.left = '50px';
+      joystickKnob.style.top = '50px';
+      dx = 0; dy = 0;
+    }, {passive:false});
+
+    // Shoot button
+    document.getElementById('joystick-shoot').addEventListener('touchstart', function(e) {
+      shootFire();
+      e.preventDefault();
+    }, {passive:false});
+
+    // Move player by direction and steps (2 blocks)
+    function movePlayerBy(direction, steps) {
+      let moved = false;
+      for (let i = 0; i < steps; i++) {
+        const from = grid[index(player.x, player.y)];
+        if (!from) break;
+        let nx = player.x, ny = player.y;
+        if (direction === 'up' && !from.walls[0]) ny--;
+        else if (direction === 'right' && !from.walls[1]) nx++;
+        else if (direction === 'down' && !from.walls[2]) ny++;
+        else if (direction === 'left' && !from.walls[3]) nx--;
+        // Check if actually moved
+        if (nx !== player.x || ny !== player.y) {
+          player.x = nx;
+          player.y = ny;
+          moved = true;
+        } else {
+          break;
+        }
+      }
+      if (moved) {
+        // Copy your carrot, enderman, win, and redraw logic from your keydown handler:
+        let ateCarrot = false;
+        for (const carrot of carrots) {
+          if (!carrot.collected && carrot.x === player.x && carrot.y === player.y) {
+            carrot.collected = true;
+            carrotsCollected++;
+            ateCarrot = true;
+            updateCarrotCounter();
+          }
+        }
+        if (ateCarrot) {
+          eatCarrotSound.currentTime = 0;
+          eatCarrotSound.play().catch(()=>{});
+        }
+        if (enderman && player.x === enderman.x && player.y === enderman.y) {
+          reachedEnderman = true;
+          enderman = null;
+        }
+        drawMaze();
+        if (player.x === endCell.x && player.y === endCell.y) {
+          winSound.currentTime = 0;
+          winSound.play().catch(()=>{});
+          congratsDiv.style.display = "block";
+          congratsSound.currentTime = 0;
+          congratsSound.play().catch(()=>{});
+          showFireworks();
+
+          // --- Level completion logic ---
+          const params = new URLSearchParams(window.location.search);
+          const level = Number(params.get('level'));
+          if (level) {
+            let completed = [];
+            try {
+              completed = JSON.parse(localStorage.getItem('maze_completed_levels') || '[]');
+            } catch {}
+            if (!completed.includes(level)) {
+              completed.push(level);
+              localStorage.setItem('maze_completed_levels', JSON.stringify(completed));
+            }
+          }
+
+          // Redirect to gallery after a short delay so player sees the congrats
+          setTimeout(() => {
+            window.location.href = "../mazelevel.html";
+          }, 2500);
+        }
+      }
+    }
 
     window.addEventListener('resize', () => {
       startMaze();
