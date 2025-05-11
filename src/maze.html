@@ -58,78 +58,6 @@
       70% { transform: translate(-50%, -50%) scale(1.1);}
       100% { transform: translate(-50%, -50%) scale(1);}
     }
-
-    /* Joystick styles */
-    #joystick-area {
-      position: fixed;
-      left: 30px;
-      bottom: 30px;
-      width: 120px;
-      height: 120px;
-      z-index: 100;
-      touch-action: none;
-      display: none;
-    }
-    #joystick-base {
-      position: absolute;
-      left: 0;
-      top: 0;
-      width: 120px;
-      height: 120px;
-      border-radius: 60px;
-      background: #222a;
-      box-shadow: 0 0 12px #0004;
-    }
-    #joystick-knob {
-      position: absolute;
-      left: 40px;
-      top: 40px;
-      width: 40px;
-      height: 40px;
-      border-radius: 20px;
-      background: #ff9800;
-      box-shadow: 0 0 8px #ff9800;
-    }
-
-    /* Mobile controls styles */
-    #mobile-controls {
-      display: none;
-      position: fixed;
-      bottom: 40px;
-      right: 40px;
-      z-index: 200;
-    }
-    .mobile-btn {
-      width: 90px;
-      height: 90px;
-      margin: 0 8px;
-      border-radius: 50%;
-      background: #ff9800;
-      color: #fff;
-      font-size: 3.2rem;
-      border: none;
-      box-shadow: 0 0 16px #ff9800;
-      touch-action: manipulation;
-      user-select: none;
-    }
-    .mobile-shoot-btn {
-      width: 140px;
-      height: 140px;
-      border-radius: 70px;
-      background: #2196f3;
-      color: #fff;
-      font-size: 3.8rem;
-      border: none;
-      box-shadow: 0 0 24px #2196f3;
-      z-index: 200;
-      touch-action: manipulation;
-      user-select: none;
-    }
-    .mobile-btn:active, .mobile-shoot-btn:active {
-      background: #ffb74d;
-      box-shadow: 0 0 32px #ff9800;
-      filter: brightness(1.2);
-    }
   </style>
 </head>
 <body>
@@ -137,20 +65,6 @@
     <canvas id="mazeCanvas"></canvas>
     <div id="congrats">🎉 Congratulations! 🎉</div>
   </div>
-
-  <!-- Mobile controls: 4 direction buttons and shoot button, all in bottom right corner -->
-  <div id="mobile-controls" style="display:none; position:fixed; bottom:40px; right:40px; z-index:200;">
-    <div style="display:flex; flex-direction:column; align-items:center;">
-      <button id="btn-up" class="mobile-btn" style="margin-bottom:12px;">▲</button>
-      <div style="display:flex;flex-direction:row;">
-        <button id="btn-left" class="mobile-btn" style="margin-right:12px;">◀</button>
-        <button id="btn-down" class="mobile-btn" style="margin-right:12px;">▼</button>
-        <button id="btn-right" class="mobile-btn">▶</button>
-      </div>
-      <button id="btn-shoot" class="mobile-shoot-btn" style="margin-top:18px;width:140px;height:140px;font-size:3.8rem;">🔥</button>
-    </div>
-  </div>
-
   <script>
     // --- State ---
     let cols, rows, cellSize, grid, current, stack;
@@ -712,7 +626,7 @@
         }
       }
 
-      // Add this after "Kill CPU if hit by fire"
+      // Kill CPU children if hit by fire
       for (const fire of fires) {
         for (let i = cpuChildren.length - 1; i >= 0; i--) {
           const child = cpuChildren[i];
@@ -938,69 +852,6 @@
       }
     });
 
-    // Show mobile controls only on touch devices
-    if ('ontouchstart' in window) {
-      document.getElementById('mobile-controls').style.display = 'block';
-    }
-
-    // Button event listeners
-    document.getElementById('btn-up').addEventListener('touchstart', function(e) {
-      simulateKey('ArrowUp'); e.preventDefault();
-    }, {passive:false});
-    document.getElementById('btn-down').addEventListener('touchstart', function(e) {
-      simulateKey('ArrowDown'); e.preventDefault();
-    }, {passive:false});
-    document.getElementById('btn-left').addEventListener('touchstart', function(e) {
-      simulateKey('ArrowLeft'); e.preventDefault();
-    }, {passive:false});
-    document.getElementById('btn-right').addEventListener('touchstart', function(e) {
-      simulateKey('ArrowRight'); e.preventDefault();
-    }, {passive:false});
-    document.getElementById('btn-shoot').addEventListener('touchstart', function(e) {
-      simulateKey(' '); e.preventDefault();
-    }, {passive:false});
-
-    // Simulate keyboard event for movement
-    function simulateKey(key) {
-      window.dispatchEvent(new KeyboardEvent('keydown', {key: key}));
-    }
-
-    // --- Continuous movement on hold ---
-    let moveInterval = null;
-    function startMove(key) {
-      simulateKey(key);
-      moveInterval = setInterval(() => simulateKey(key), 180);
-    }
-    function stopMove() {
-      if (moveInterval) clearInterval(moveInterval);
-      moveInterval = null;
-    }
-
-    // Button event listeners for touch (continuous movement)
-    document.getElementById('btn-up').addEventListener('touchstart', function(e) {
-      startMove('ArrowUp'); e.preventDefault();
-    }, {passive:false});
-    document.getElementById('btn-down').addEventListener('touchstart', function(e) {
-      startMove('ArrowDown'); e.preventDefault();
-    }, {passive:false});
-    document.getElementById('btn-left').addEventListener('touchstart', function(e) {
-      startMove('ArrowLeft'); e.preventDefault();
-    }, {passive:false});
-    document.getElementById('btn-right').addEventListener('touchstart', function(e) {
-      startMove('ArrowRight'); e.preventDefault();
-    }, {passive:false});
-
-    // Stop movement on touchend/cancel
-    ['btn-up','btn-down','btn-left','btn-right'].forEach(id => {
-      document.getElementById(id).addEventListener('touchend', stopMove, {passive:false});
-      document.getElementById(id).addEventListener('touchcancel', stopMove, {passive:false});
-    });
-
-    // Shoot button (single tap)
-    document.getElementById('btn-shoot').addEventListener('touchstart', function(e) {
-      simulateKey(' '); e.preventDefault();
-    }, {passive:false});
-
     window.addEventListener('resize', () => {
       startMaze();
     });
@@ -1022,7 +873,7 @@
       if (cpuChildrenInterval) clearInterval(cpuChildrenInterval);
       cpuChildrenInterval = setInterval(spawnCPUChild, 5000); // every 5 seconds
       reachedEnderman = false;
-      setTimeout(moveEnderman, 700); // <--- Add this line
+      setTimeout(moveEnderman, 700);
     }
     startMaze();
 
