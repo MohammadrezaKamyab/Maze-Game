@@ -96,12 +96,12 @@
       display: none;
       position: fixed;
       bottom: 40px;
-      left: 40px;
+      right: 40px;
       z-index: 200;
     }
     .mobile-btn {
-      width: 100px;
-      height: 100px;
+      width: 90px;
+      height: 90px;
       margin: 0 8px;
       border-radius: 50%;
       background: #ff9800;
@@ -113,15 +113,12 @@
       user-select: none;
     }
     .mobile-shoot-btn {
-      position: fixed;
-      bottom: 60px;
-      right: 60px;
-      width: 130px;
-      height: 130px;
-      border-radius: 65px;
+      width: 140px;
+      height: 140px;
+      border-radius: 70px;
       background: #2196f3;
       color: #fff;
-      font-size: 3.5rem;
+      font-size: 3.8rem;
       border: none;
       box-shadow: 0 0 24px #2196f3;
       z-index: 200;
@@ -141,19 +138,18 @@
     <div id="congrats">🎉 Congratulations! 🎉</div>
   </div>
 
-  <!-- Mobile controls: 4 direction buttons and shoot button -->
-  <div id="mobile-controls" style="display:none; position:fixed; bottom:40px; left:40px; z-index:200;">
+  <!-- Mobile controls: 4 direction buttons and shoot button, all in bottom right corner -->
+  <div id="mobile-controls" style="display:none; position:fixed; bottom:40px; right:40px; z-index:200;">
     <div style="display:flex; flex-direction:column; align-items:center;">
-      <button id="btn-up" class="mobile-btn">▲</button>
-      <div style="display:flex;flex-direction:row; margin-top:12px;">
-        <button id="btn-left" class="mobile-btn">◀</button>
-        <button id="btn-down" class="mobile-btn" style="margin: 0 18px;">▼</button>
+      <button id="btn-up" class="mobile-btn" style="margin-bottom:12px;">▲</button>
+      <div style="display:flex;flex-direction:row;">
+        <button id="btn-left" class="mobile-btn" style="margin-right:12px;">◀</button>
+        <button id="btn-down" class="mobile-btn" style="margin-right:12px;">▼</button>
         <button id="btn-right" class="mobile-btn">▶</button>
       </div>
+      <button id="btn-shoot" class="mobile-shoot-btn" style="margin-top:18px;width:140px;height:140px;font-size:3.8rem;">🔥</button>
     </div>
   </div>
-  <!-- Shoot button on lower right -->
-  <button id="btn-shoot" class="mobile-shoot-btn" style="display:none;">🔥</button>
 
   <script>
     // --- State ---
@@ -945,7 +941,6 @@
     // Show mobile controls only on touch devices
     if ('ontouchstart' in window) {
       document.getElementById('mobile-controls').style.display = 'block';
-      document.getElementById('btn-shoot').style.display = 'block';
     }
 
     // Button event listeners
