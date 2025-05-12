@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Login - Kamyab Maze</title>
+  <style>
+    body {
+      background: linear-gradient(135deg, #232526 0%, #009efd 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      margin: 0;
+    }
+    .login-container {
+      background: #fff;
+      padding: 36px 32px 28px 32px;
+      border-radius: 18px;
+      box-shadow: 0 0 32px #009efd44;
+      width: 340px;
+      max-width: 90vw;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .login-container h2 {
+      margin-bottom: 18px;
+      color: #2196f3;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+    .login-container input {
+      width: 100%;
+      padding: 12px;
+      margin: 8px 0 18px 0;
+      border: 1px solid #bbb;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      outline: none;
+      transition: border 0.2s;
+    }
+    .login-container input:focus {
+      border: 1.5px solid #2196f3;
+    }
+    .login-container button {
+      width: 100%;
+      padding: 12px;
+      background: #2196f3;
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-bottom: 10px;
+      transition: background 0.2s;
+    }
+    .login-container button:hover {
+      background: #1769aa;
+    }
+    .switch-link {
+      color: #2196f3;
+      cursor: pointer;
+      text-decoration: underline;
+      font-size: 0.98rem;
+      margin-top: 4px;
+    }
+    .error-message {
+      color: #d32f2f;
+      font-size: 0.98rem;
+      margin-bottom: 10px;
+      min-height: 18px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-container" id="login-box">
+    <h2 id="form-title">Login</h2>
+    <div class="error-message" id="error-msg"></div>
+    <input type="text" id="username" placeholder="Username" autocomplete="username">
+    <input type="password" id="password" placeholder="Password" autocomplete="current-password">
+    <button id="login-btn">Login</button>
+    <button id="signup-btn" style="background:#43a047;">Sign Up</button>
+    <span class="switch-link" id="switch-link">Don't have an account? Sign up</span>
+  </div>
+  <script>
+    // Simple localStorage-based login/signup (not secure, for demo only)
+    const loginBtn = document.getElementById('login-btn');
+    const signupBtn = document.getElementById('signup-btn');
+    const switchLink = document.getElementById('switch-link');
+    const formTitle = document.getElementById('form-title');
+    const errorMsg = document.getElementById('error-msg');
+    let isLogin = true;
+
+    function showLogin() {
+      isLogin = true;
+      formTitle.textContent = "Login";
+      loginBtn.style.display = "block";
+      signupBtn.style.display = "none";
+      switchLink.textContent = "Don't have an account? Sign up";
+      errorMsg.textContent = "";
+    }
+    function showSignup() {
+      isLogin = false;
+      formTitle.textContent = "Sign Up";
+      loginBtn.style.display = "none";
+      signupBtn.style.display = "block";
+      switchLink.textContent = "Already have an account? Login";
+      errorMsg.textContent = "";
+    }
+    showLogin();
+
+    switchLink.onclick = function() {
+      if (isLogin) showSignup();
+      else showLogin();
+    };
+
+    loginBtn.onclick = function() {
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      if (!username || !password) {
+        errorMsg.textContent = "Please enter username and password.";
+        return;
+      }
+      const users = JSON.parse(localStorage.getItem('maze_users') || '{}');
+      if (!users[username] || users[username] !== password) {
+        errorMsg.textContent = "Invalid username or password.";
+        return;
+      }
+      // Success: Save session and redirect
+      localStorage.setItem('maze_logged_in', username);
+      window.location.href = "mazelevels.html";
+    };
+
+    signupBtn.onclick = function() {
+      const username = document.getElementById('username').value.trim();
+      const password = document.getElementById('password').value;
+      if (!username || !password) {
+        errorMsg.textContent = "Please enter username and password.";
+        return;
+      }
+      let users = JSON.parse(localStorage.getItem('maze_users') || '{}');
+      if (users[username]) {
+        errorMsg.textContent = "Username already exists.";
+        return;
+      }
+      users[username] = password;
+      localStorage.setItem('maze_users', JSON.stringify(users));
+      localStorage.setItem('maze_logged_in', username);
+      window.location.href = "mazelevels.html";
+    };
+
+    // Enter key support
+    document.getElementById('username').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') (isLogin ? loginBtn : signupBtn).click();
+    });
+    document.getElementById('password').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') (isLogin ? loginBtn : signupBtn).click();
+    });
+  </script>
+</body>
+</html>

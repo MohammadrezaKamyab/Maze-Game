@@ -1149,6 +1149,16 @@ function movePlayerBy(direction, steps) {
     }
   }
 }
+
+// Call this function every time the player moves
+function trackMovement(direction, x, y) {
+  const username = localStorage.getItem('maze_logged_in') || 'guest';
+  fetch('http://localhost:3000/api/move', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, direction, x, y })
+  });
+}
   </script>
 </body>
 </html>
