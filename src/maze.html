@@ -59,48 +59,49 @@
       100% { transform: translate(-50%, -50%) scale(1);}
     }
     #joystick-area {
-      display:none;
-      position:fixed;
-      bottom:40px;
-      right:40px;
-      width:140px;
-      height:140px;
-      z-index:200;
-      touch-action:none;
+      display: none;
+      position: fixed;
+      bottom: 40px;
+      right: 40px;
+      width: 140px;
+      height: 140px;
+      z-index: 200;
+      touch-action: none;
       pointer-events: auto;
     }
     #joystick-base {
-      position:absolute;
-      left:0;
-      top:0;
-      width:140px;
-      height:140px;
-      border-radius:70px;
-      background:#222a;
-      box-shadow:0 0 12px #0004;
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 140px;
+      height: 140px;
+      border-radius: 70px;
+      background: #222a;
+      box-shadow: 0 0 12px #0004;
     }
     #joystick-knob {
-      position:absolute;
-      left:50px;
-      top:50px;
-      width:40px;
-      height:40px;
-      border-radius:20px;
-      background:#ff9800;
-      box-shadow:0 0 8px #ff9800;
+      position: absolute;
+      left: 50px;
+      top: 50px;
+      width: 40px;
+      height: 40px;
+      border-radius: 20px;
+      background: #ff9800;
+      box-shadow: 0 0 8px #ff9800;
+      touch-action: none;
     }
     #joystick-shoot {
-      position:absolute;
-      right:-90px;
-      bottom:0;
-      width:90px;
-      height:90px;
-      border-radius:45px;
-      background:#2196f3;
-      color:#fff;
-      font-size:2.5rem;
-      border:none;
-      box-shadow:0 0 16px #2196f3;
+      position: absolute;
+      right: -90px;
+      bottom: 0;
+      width: 90px;
+      height: 90px;
+      border-radius: 45px;
+      background: #2196f3;
+      color: #fff;
+      font-size: 2.5rem;
+      border: none;
+      box-shadow: 0 0 16px #2196f3;
     }
   </style>
 </head>
@@ -984,6 +985,7 @@
       return path;
     }
 
+    // Show joystick only on touch devices, after DOM is loaded
     document.addEventListener('DOMContentLoaded', function() {
   if ('ontouchstart' in window) {
     document.getElementById('joystick-area').style.display = 'block';
@@ -1063,7 +1065,7 @@ document.getElementById('joystick-shoot').addEventListener('touchstart', functio
   e.preventDefault();
 }, {passive:false});
 
-// Move player by direction and steps (2 blocks)
+// Move player by direction and steps (1 block per tick)
 function movePlayerBy(direction, steps) {
   let moved = false;
   for (let i = 0; i < steps; i++) {
