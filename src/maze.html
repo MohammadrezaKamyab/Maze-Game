@@ -62,9 +62,9 @@
       display: none;
       position: fixed;
       bottom: 40px;
-      right: 40px;
-      width: 140px;
-      height: 140px;
+      right: 180px; /* was 40px, move more to the left */
+      width: 200px;  /* was 140px, make bigger */
+      height: 200px; /* was 140px, make bigger */
       z-index: 200;
       touch-action: none;
       pointer-events: auto;
@@ -73,35 +73,35 @@
       position: absolute;
       left: 0;
       top: 0;
-      width: 140px;
-      height: 140px;
-      border-radius: 70px;
+      width: 200px;   /* was 140px */
+      height: 200px;  /* was 140px */
+      border-radius: 100px; /* was 70px */
       background: #222a;
-      box-shadow: 0 0 12px #0004;
+      box-shadow: 0 0 18px #0004;
     }
     #joystick-knob {
       position: absolute;
-      left: 50px;
-      top: 50px;
-      width: 40px;
-      height: 40px;
-      border-radius: 20px;
+      left: 80px;  /* was 50px */
+      top: 80px;   /* was 50px */
+      width: 60px; /* was 40px */
+      height: 60px;/* was 40px */
+      border-radius: 30px; /* was 20px */
       background: #ff9800;
-      box-shadow: 0 0 8px #ff9800;
+      box-shadow: 0 0 12px #ff9800;
       touch-action: none;
     }
     #joystick-shoot {
       position: absolute;
-      right: -90px;
+      right: -120px; /* was -90px */
       bottom: 0;
-      width: 90px;
-      height: 90px;
-      border-radius: 45px;
+      width: 110px;  /* was 90px */
+      height: 110px; /* was 90px */
+      border-radius: 55px; /* was 45px */
       background: #2196f3;
       color: #fff;
-      font-size: 2.5rem;
+      font-size: 2.8rem;
       border: none;
-      box-shadow: 0 0 16px #2196f3;
+      box-shadow: 0 0 20px #2196f3;
     }
   </style>
 </head>
