@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Maze Levels</title>
+  <style>
+    body {
+      background: linear-gradient(135deg, #232526 0%, #009efd 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Segoe UI', Arial, sans-serif;
+      margin: 0;
+    }
+    .levels-container {
+      background: #fff;
+      padding: 36px 32px 28px 32px;
+      border-radius: 18px;
+      box-shadow: 0 0 32px #009efd44;
+      width: 340px;
+      max-width: 90vw;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h1 {
+      color: #2196f3;
+      margin-bottom: 24px;
+    }
+    .level-btn {
+      width: 100%;
+      padding: 14px;
+      margin: 8px 0;
+      border: none;
+      border-radius: 8px;
+      background: #2196f3;
+      color: #fff;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .level-btn:hover {
+      background: #1769aa;
+    }
+  </style>
+</head>
+<body>
+  <script>
+const username = localStorage.getItem('maze_logged_in') || 'guest';
+const key = 'maze_unlocked_levels_' + username;
+let unlocked = [];
+try {
+  unlocked = JSON.parse(localStorage.getItem(key) || '[]');
+} catch {}
+// Always unlock level 1
+if (!unlocked.includes(1)) unlocked.push(1);
+
+function isUnlocked(level) {
+  return unlocked.includes(level);
+}
+</script>
+
+  <div class="levels-container">
+    <h1>Select a Maze Level</h1>
+    <button class="level-btn" onclick="window.location.href='maze.html?level=1'" disabled>Level 1</button>
+    <button class="level-btn" onclick="window.location.href='maze.html?level=2'" disabled>Level 2</button>
+    <button class="level-btn" onclick="window.location.href='maze.html?level=3'" disabled>Level 3</button>
+    <!-- Add more levels as needed -->
+  </div>
+  <script>
+document.querySelectorAll('.level-btn').forEach((btn, idx) => {
+  const level = idx + 1;
+  if (isUnlocked(level)) btn.disabled = false;
+});
+</script>
+</body>
+</html>

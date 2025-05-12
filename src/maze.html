@@ -888,24 +888,26 @@
           congratsSound.play().catch(()=>{});
           showFireworks();
 
-          // --- Level completion logic ---
+          // --- Level unlock/lock logic ---
           const params = new URLSearchParams(window.location.search);
           const level = Number(params.get('level'));
-          if (level) {
-            let completed = [];
-            try {
-              completed = JSON.parse(localStorage.getItem('maze_completed_levels') || '[]');
-            } catch {}
-            if (!completed.includes(level)) {
-              completed.push(level);
-              localStorage.setItem('maze_completed_levels', JSON.stringify(completed));
-            }
+          const username = localStorage.getItem('maze_logged_in') || 'guest';
+          const key = 'maze_unlocked_levels_' + username;
+          let unlocked = [];
+          try {
+            unlocked = JSON.parse(localStorage.getItem(key) || '[]');
+          } catch {}
+          // Remove the current level from unlocked
+          unlocked = unlocked.filter(l => l !== level);
+          // Unlock the next level
+          if (level && !unlocked.includes(level + 1)) {
+            unlocked.push(level + 1);
           }
+          localStorage.setItem(key, JSON.stringify(unlocked));
 
-          // Redirect to gallery after a short delay so player sees the congrats
           setTimeout(() => {
-            window.location.href = "../mazelevel.html";
-          }, 2500); // 2.5 seconds, adjust as you like
+            window.location.href = "mazelevels.html";
+          }, 2500);
         }
         e.preventDefault();
       }
