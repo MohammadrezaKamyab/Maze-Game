@@ -62,9 +62,9 @@
       display: none;
       position: fixed;
       bottom: 40px;
-      right: 180px; /* was 40px, move more to the left */
-      width: 200px;  /* was 140px, make bigger */
-      height: 200px; /* was 140px, make bigger */
+      right: 40px;
+      width: 220px;   /* bigger */
+      height: 220px;  /* bigger */
       z-index: 200;
       touch-action: none;
       pointer-events: auto;
@@ -73,36 +73,43 @@
       position: absolute;
       left: 0;
       top: 0;
-      width: 200px;   /* was 140px */
-      height: 200px;  /* was 140px */
-      border-radius: 100px; /* was 70px */
+      width: 220px;
+      height: 220px;
+      border-radius: 110px;
       background: #222a;
-      box-shadow: 0 0 18px #0004;
+      box-shadow: 0 0 24px #0004;
     }
     #joystick-knob {
       position: absolute;
-      left: 100px;  /* center for 260px base */
-      top: 100px;
-      width: 100px;   /* was 60px */
-      height: 100px;  /* was 60px */
-      border-radius: 50px;
+      left: 80px;
+      top: 80px;
+      width: 60px;
+      height: 60px;
+      border-radius: 30px;
       background: #ff9800;
       box-shadow: 0 0 18px #ff9800;
       touch-action: none;
-      opacity: 0.85;
+      opacity: 0.9;
     }
     #joystick-shoot {
-      position: absolute;
-      right: -120px; /* was -90px */
-      bottom: 0;
-      width: 110px;  /* was 90px */
-      height: 110px; /* was 90px */
-      border-radius: 55px; /* was 45px */
+      display: none; /* Hide the fire button in joystick area */
+    }
+
+    /* New fire button for bottom left */
+    #fire-btn {
+      display: none;
+      position: fixed;
+      bottom: 40px;
+      left: 40px;
+      width: 120px;
+      height: 120px;
+      border-radius: 60px;
       background: #2196f3;
       color: #fff;
-      font-size: 2.8rem;
+      font-size: 3.2rem;
       border: none;
-      box-shadow: 0 0 20px #2196f3;
+      box-shadow: 0 0 28px #2196f3;
+      z-index: 200;
     }
   </style>
 </head>
@@ -116,6 +123,7 @@
     <div id="joystick-knob"></div>
     <button id="joystick-shoot">🔥</button>
   </div>
+  <button id="fire-btn">🔥</button>
   <script>
     // --- State ---
     let cols, rows, cellSize, grid, current, stack;
@@ -990,8 +998,18 @@
     document.addEventListener('DOMContentLoaded', function() {
   if ('ontouchstart' in window) {
     document.getElementById('joystick-area').style.display = 'block';
+    document.getElementById('fire-btn').style.display = 'block';
+    // Hide the old fire button in joystick area if present
+    var js = document.getElementById('joystick-shoot');
+    if (js) js.style.display = 'none';
   }
 });
+
+document.getElementById('fire-btn').addEventListener('touchstart', function(e) {
+  shootFire();
+  e.preventDefault();
+}, {passive:false});
+
 const joystickArea = document.getElementById('joystick-area');
 const joystickKnob = document.getElementById('joystick-knob');
 let dragging = false, startX = 0, startY = 0, dx = 0, dy = 0;
