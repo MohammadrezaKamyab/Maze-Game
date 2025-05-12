@@ -81,14 +81,15 @@
     }
     #joystick-knob {
       position: absolute;
-      left: 80px;  /* was 50px */
-      top: 80px;   /* was 50px */
-      width: 60px; /* was 40px */
-      height: 60px;/* was 40px */
-      border-radius: 30px; /* was 20px */
+      left: 100px;  /* center for 260px base */
+      top: 100px;
+      width: 100px;   /* was 60px */
+      height: 100px;  /* was 60px */
+      border-radius: 50px;
       background: #ff9800;
-      box-shadow: 0 0 12px #ff9800;
+      box-shadow: 0 0 18px #ff9800;
       touch-action: none;
+      opacity: 0.85;
     }
     #joystick-shoot {
       position: absolute;
@@ -1009,9 +1010,11 @@ function stopContinuousMove() {
   moveDir = null;
 }
 
-joystickKnob.addEventListener('touchstart', function(e) {
+// Replace joystickKnob with joystickArea for touchstart
+joystickArea.addEventListener('touchstart', function(e) {
   dragging = true;
   const touch = e.touches[0];
+  const rect = joystickArea.getBoundingClientRect();
   startX = touch.clientX;
   startY = touch.clientY;
   dx = 0; dy = 0;
