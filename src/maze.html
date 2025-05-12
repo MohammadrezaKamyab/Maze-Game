@@ -65,6 +65,11 @@
     <canvas id="mazeCanvas"></canvas>
     <div id="congrats">🎉 Congratulations! 🎉</div>
   </div>
+  <div id="joystick-area" style="display:none; position:fixed; bottom:40px; right:40px; width:140px; height:140px; z-index:200; touch-action:none;">
+    <div id="joystick-base" style="position:absolute; left:0; top:0; width:140px; height:140px; border-radius:70px; background:#222a; box-shadow:0 0 12px #0004;"></div>
+    <div id="joystick-knob" style="position:absolute; left:50px; top:50px; width:40px; height:40px; border-radius:20px; background:#ff9800; box-shadow:0 0 8px #ff9800;"></div>
+    <button id="joystick-shoot" style="position:absolute; right:-90px; bottom:0; width:90px; height:90px; border-radius:45px; background:#2196f3; color:#fff; font-size:2.5rem; border:none; box-shadow:0 0 16px #2196f3;">🔥</button>
+  </div>
   <script>
     // --- State ---
     let cols, rows, cellSize, grid, current, stack;
@@ -934,6 +939,147 @@
       path.reverse();
       return path;
     }
+
+    if ('ontouchstart' in window) {
+  document.getElementById('joystick-area').style.display = 'block';
+}
+const joystickArea = document.getElementById('joystick-area');
+const joystickKnob = document.getElementById('joystick-knob');
+let dragging = false, startX = 0, startY = 0, dx = 0, dy = 0;
+let moveDir = null;
+let moveInterval = null;
+
+function startContinuousMove(direction) {
+  if (moveInterval) clearInterval(moveInterval);
+  movePlayerBy(direction, 1);
+  moveInterval = setInterval(() => movePlayerBy(direction, 1), 180);
+}
+
+function stopContinuousMove() {
+  if (moveInterval) clearInterval(moveInterval);
+  moveInterval = null;
+  moveDir = null;
+}
+
+joystickKnob.addEventListener('touchstart', function(e) {
+  dragging = true;
+  const touch = e.touches[0];
+  startX = touch.clientX;
+  startY = touch.clientY;
+  dx = 0; dy = 0;
+  e.preventDefault();
+}, {passive:false});
+
+window.addEventListener('touchmove', function(e) {
+  if (!dragging) return;
+  const touch = e.touches[0];
+  dx = touch.clientX - startX;
+  dy = touch.clientY - startY;
+  // Limit knob movement
+  const dist = Math.sqrt(dx*dx + dy*dy);
+  const maxDist = 50;
+  if (dist > maxDist) {
+    dx = dx * maxDist / dist;
+    dy = dy * maxDist / dist;
+  }
+  joystickKnob.style.left = (50 + dx) + 'px';
+  joystickKnob.style.top = (50 + dy) + 'px';
+
+  // Determine direction and start continuous move if changed
+  let dir = null;
+  if (Math.abs(dx) > Math.abs(dy)) {
+    if (dx > 20) dir = 'right';
+    else if (dx < -20) dir = 'left';
+  } else {
+    if (dy > 20) dir = 'down';
+    else if (dy < -20) dir = 'up';
+  }
+  if (dir !== moveDir) {
+    stopContinuousMove();
+    if (dir) {
+      moveDir = dir;
+      startContinuousMove(dir);
+    }
+  }
+}, {passive:false});
+
+window.addEventListener('touchend', function(e) {
+  if (!dragging) return;
+  dragging = false;
+  stopContinuousMove();
+  joystickKnob.style.left = '50px';
+  joystickKnob.style.top = '50px';
+  dx = 0; dy = 0;
+}, {passive:false});
+
+document.getElementById('joystick-shoot').addEventListener('touchstart', function(e) {
+  shootFire();
+  e.preventDefault();
+}, {passive:false});
+
+// Move player by direction and steps (2 blocks)
+function movePlayerBy(direction, steps) {
+  let moved = false;
+  for (let i = 0; i < steps; i++) {
+    const from = grid[index(player.x, player.y)];
+    if (!from) break;
+    let nx = player.x, ny = player.y;
+    if (direction === 'up' && !from.walls[0]) ny--;
+    else if (direction === 'right' && !from.walls[1]) nx++;
+    else if (direction === 'down' && !from.walls[2]) ny++;
+    else if (direction === 'left' && !from.walls[3]) nx--;
+    if (nx !== player.x || ny !== player.y) {
+      player.x = nx;
+      player.y = ny;
+      moved = true;
+    } else {
+      break;
+    }
+  }
+  if (moved) {
+    let ateCarrot = false;
+    for (const carrot of carrots) {
+      if (!carrot.collected && carrot.x === player.x && carrot.y === player.y) {
+        carrot.collected = true;
+        carrotsCollected++;
+        ateCarrot = true;
+        updateCarrotCounter();
+      }
+    }
+    if (ateCarrot) {
+      eatCarrotSound.currentTime = 0;
+      eatCarrotSound.play().catch(()=>{});
+    }
+    if (enderman && player.x === enderman.x && player.y === enderman.y) {
+      reachedEnderman = true;
+      enderman = null;
+    }
+    drawMaze();
+    if (player.x === endCell.x && player.y === endCell.y) {
+      winSound.currentTime = 0;
+      winSound.play().catch(()=>{});
+      congratsDiv.style.display = "block";
+      congratsSound.currentTime = 0;
+      congratsSound.play().catch(()=>{});
+      showFireworks();
+      const params = new URLSearchParams(window.location.search);
+      const level = Number(params.get('level'));
+      if (level) {
+        let completed = [];
+        try {
+          completed = JSON.parse(localStorage.getItem('maze_completed_levels') || '[]');
+        } catch {}
+        if (!completed.includes(level)) {
+          completed.push(level);
+          localStorage.setItem('maze_completed_levels', JSON.stringify(completed));
+        }
+      }
+      setTimeout(() => {
+        window.location.href = "../mazelevel.html";
+      }, 2500);
+    }
+  }
+}
   </script>
 </body>
 </html>
