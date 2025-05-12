@@ -40,40 +40,92 @@
       font-weight: 600;
       cursor: pointer;
       transition: background 0.2s;
+      opacity: 1;
     }
-    .level-btn:hover {
+    .level-btn.locked {
+      background: #bbb !important;
+      color: #eee !important;
+      cursor: not-allowed;
+      opacity: 0.7;
+    }
+    .level-btn.won {
+      background: #43a047 !important;
+      color: #fff !important;
+      cursor: pointer;
+      opacity: 1;
+    }
+    .level-btn:hover:not(.locked) {
       background: #1769aa;
     }
   </style>
 </head>
 <body>
-  <script>
-const username = localStorage.getItem('maze_logged_in') || 'guest';
-const key = 'maze_unlocked_levels_' + username;
-let unlocked = [];
-try {
-  unlocked = JSON.parse(localStorage.getItem(key) || '[]');
-} catch {}
-// Always unlock level 1
-if (!unlocked.includes(1)) unlocked.push(1);
-
-function isUnlocked(level) {
-  return unlocked.includes(level);
-}
-</script>
-
   <div class="levels-container">
     <h1>Select a Maze Level</h1>
-    <button class="level-btn" onclick="window.location.href='maze.html?level=1'" disabled>Level 1</button>
-    <button class="level-btn" onclick="window.location.href='maze.html?level=2'" disabled>Level 2</button>
-    <button class="level-btn" onclick="window.location.href='maze.html?level=3'" disabled>Level 3</button>
-    <!-- Add more levels as needed -->
+    <div id="current-level-info" style="margin-bottom:18px; color:#2196f3; font-weight:bold; font-size:1.15rem;"></div>
+    <button class="level-btn" id="level1" onclick="window.location.href='maze.html?level=1'">Level 1</button>
+    <button class="level-btn" id="level2" onclick="window.location.href='maze.html?level=2'">Level 2</button>
+    <button class="level-btn" id="level3" onclick="window.location.href='maze.html?level=3'">Level 3</button>
+    <button class="level-btn" id="level4" onclick="window.location.href='maze.html?level=4'">Level 4</button>
+    <button class="level-btn" id="level5" onclick="window.location.href='maze.html?level=5'">Level 5</button>
+    <button class="level-btn" id="level6" onclick="window.location.href='maze.html?level=6'">Level 6</button>
+    <button class="level-btn" id="level7" onclick="window.location.href='maze.html?level=7'">Level 7</button>
+    <button class="level-btn" id="level8" onclick="window.location.href='maze.html?level=8'">Level 8</button>
+    <button class="level-btn" id="level9" onclick="window.location.href='maze.html?level=9'">Level 9</button>
+    <button class="level-btn" id="level10" onclick="window.location.href='maze.html?level=10'">Level 10</button>
+    <div id="play-next-label" style="margin-top:24px; color:#43a047; font-size:1.2rem; font-weight:bold;"></div>
   </div>
   <script>
-document.querySelectorAll('.level-btn').forEach((btn, idx) => {
-  const level = idx + 1;
-  if (isUnlocked(level)) btn.disabled = false;
-});
-</script>
+    const username = localStorage.getItem('maze_logged_in') || 'guest';
+    const unlockedKey = 'maze_unlocked_levels_' + username;
+    const wonKey = 'maze_won_levels_' + username;
+    let unlocked = [];
+    let won = [];
+    try {
+      unlocked = JSON.parse(localStorage.getItem(unlockedKey) || '[]');
+    } catch {}
+    try {
+      won = JSON.parse(localStorage.getItem(wonKey) || '[]');
+    } catch {}
+    // Always unlock level 1
+    if (!unlocked.includes(1)) unlocked.push(1);
+
+    function updateLevelButtons() {
+      document.querySelectorAll('.level-btn').forEach((btn, idx) => {
+        const level = idx + 1;
+        btn.classList.remove('locked', 'won');
+        btn.disabled = false;
+        if (won.includes(level)) {
+          btn.classList.add('won');
+          btn.disabled = true; // Can't be played anymore
+        } else if (!unlocked.includes(level)) {
+          btn.classList.add('locked');
+          btn.disabled = true;
+        }
+      });
+    }
+    updateLevelButtons();
+
+    // Show the next level to play
+    function showCurrentLevelToWin() {
+      let next = null;
+      for (let i = 1; i <= 10; i++) {
+        if (unlocked.includes(i) && !won.includes(i)) {
+          next = i;
+          break;
+        }
+      }
+      const infoDiv = document.getElementById('current-level-info');
+      const playLabel = document.getElementById('play-next-label');
+      if (next) {
+        infoDiv.textContent = "Your current level to win: Level " + next;
+        playLabel.textContent = "Play Level " + next;
+      } else {
+        infoDiv.textContent = "Congratulations! You have won all available levels!";
+        playLabel.textContent = "";
+      }
+    }
+    showCurrentLevelToWin();
+  </script>
 </body>
 </html>
